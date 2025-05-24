@@ -1,10 +1,9 @@
-ThisBuild / version := "0.1.0-SNAPSHOT"
-
-ThisBuild / scalaVersion := "3.3.6"
+ThisBuild / scalaVersion := "3.3.1"
 
 lazy val root = (project in file("."))
   .settings(
-    name := "Fire_Forest_Project",
+    name := "ScalaFXApp",
+    version := "0.1.0",
     Compile / run / fork := true,
-    libraryDependencies += "org.scalatest" %% "scalatest" % "3.2.18" % Test
+    libraryDependencies += "org.scalafx" % "scalafx_3" % "21.0.0-R31"
   )
