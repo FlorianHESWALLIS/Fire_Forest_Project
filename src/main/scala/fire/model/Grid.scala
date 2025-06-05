@@ -14,10 +14,22 @@ object Grid {
     Grid(size_X, size_Y, cells)
   }
 
-  def step(grid: Grid, meteo: Meteo): Grid = {
+  /**
+   * Simule une étape de la grille, avec ou sans brandons et/ou spot fire.
+   */
+  def step(
+            grid: Grid,
+            meteo: Meteo,
+            withBrandons: Boolean = false, // Par défaut pas le phénomène de "Brandons"
+            withSpotFire: Boolean = false // Par défaut pas le phénomène de "Spot Fire"
+          ): Grid = {
+
     val updated = grid.cells.map(_.toArray).toArray
 
-    val brandons = scala.collection.mutable.ArrayBuffer.empty[(Int, Int)]
+    // Brandons (projection de particules)
+    val brandons =
+      if (withBrandons) scala.collection.mutable.ArrayBuffer.empty[(Int, Int)]
+      else null
 
     for {
       i <- 0 until grid.size_X
@@ -38,14 +50,18 @@ object Grid {
         case Burning =>
           if (cell.m <= 0.01 * cell.mInit) Burned
           else if (testTorching(cell, meteo)) Torched else Burning
-        case Torched | Burned => cell.state
+        case Torched =>
+          if (cell.m <= 0.01 * cell.mInit) Burned
+          else Torched
+        case Burned => Burned
       }
 
       val mNew = if (cell.state == Burning) math.max(0.0, cell.m - Cell.k * cell.m * meteo.dt) else cell.m
 
       updated(i)(j) = cell.copy(T = Tnew, m = mNew, state = newState)
 
-      if (newState == Torched) {
+      // --- Génération de brandons uniquement si activé ---
+      if (withBrandons && newState == Torched) {
         for (_ <- 0 until 5) {
           val (di, dj) = meteo.ventDirection
           val d = math.abs(Random.nextGaussian() * 3).toInt + 1
@@ -59,21 +75,25 @@ object Grid {
     }
 
     // Affectation des brandons
-    brandons.groupBy(identity).view.mapValues(_.size).foreach {
-      case ((bi, bj), count) =>
-        val oldCell = updated(bi)(bj)
-        updated(bi)(bj) = oldCell.copy(fb = oldCell.fb + count)
+    if (withBrandons && brandons != null) {
+      brandons.groupBy(identity).view.mapValues(_.size).foreach {
+        case ((bi, bj), count) =>
+          val oldCell = updated(bi)(bj)
+          updated(bi)(bj) = oldCell.copy(fb = oldCell.fb + count)
+      }
     }
 
-    // Spot fire
-    for {
-      i <- 0 until grid.size_X
-      j <- 0 until grid.size_Y
-      cell = updated(i)(j)
-      if cell.fb > 0 && (cell.state == Unburned || cell.state == Heating)
-    } {
-      if (testSpotFire(cell)) {
-        updated(i)(j) = cell.copy(state = Igniting)
+    // --- Spot fire (allumage à distance), si activé ---
+    if (withSpotFire) {
+      for {
+        i <- 0 until grid.size_X
+        j <- 0 until grid.size_Y
+        cell = updated(i)(j)
+        if cell.fb > 0 && (cell.state == Unburned || cell.state == Heating)
+      } {
+        if (testSpotFire(cell)) {
+          updated(i)(j) = cell.copy(state = Igniting)
+        }
       }
     }
 
