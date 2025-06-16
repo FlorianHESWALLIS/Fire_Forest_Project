@@ -19,7 +19,7 @@ import java.io.{BufferedWriter, FileWriter}
 
 def writeCSVHeader(file: String): Unit = {
   val writer = new BufferedWriter(new FileWriter(file, false))
-  writer.write("step,i,j,state,T,m,mInit,mW,I,fb,z\n")
+  writer.write("step,i,j,state,T,m,mInit,mW\n")
   writer.close()
 }
 
@@ -30,7 +30,7 @@ def saveGridStepToCSV(file: String, step: Int, grid: Grid): Unit = {
     j <- 0 until grid.size_Y
     cell = grid.cells(i)(j)
   } writer.write(
-    s"$step,$i,$j,${cell.state},${cell.T},${cell.m},${cell.mInit},${cell.mW},${cell.I},${cell.fb},${cell.z}\n"
+    s"$step,$i,$j,${cell.state},${cell.T},${cell.m},${cell.mInit},${cell.mW}\n"
   )
   writer.close()
 }
@@ -66,10 +66,6 @@ object FireSimApp extends JFXApp3 {
   var dtInput: TextField = _
   var windSpeedInput: TextField = _
   var windDirChoice: ComboBox[String] = _
-  var withSpotfireBox: CheckBox = _
-  var withTorchingBox: CheckBox = _
-  var withSardoyBox: CheckBox = _
-  var withBrandonsBox: CheckBox = _
   var stateLabel: Label = _
   var selectedCellLabel: Label = _
   var stopBtn: Button = _
@@ -105,34 +101,25 @@ object FireSimApp extends JFXApp3 {
     val max = math.max(0.0001, mWInitial)
     val clamped = math.max(min, math.min(mW, max))
     val ratio = if (max > min) (clamped - min) / (max - min) else 0.0
-
-    // Interpolation: vert foncé (humide) → jaune vif (sec)
-    // Vert (0.0, 0.7, 0.0)  -->  Jaune (1.0, 1.0, 0.0)
     val r = ratio
-    val red = r * 1.0 + (1 - r) * 0.0 // 0 → 1
-    val green = r * 1.0 + (1 - r) * 0.7 // 0.7 → 1
+    val red = r * 1.0 + (1 - r) * 0.0
+    val green = r * 1.0 + (1 - r) * 0.7
     val blue = 0.0
-
     Color.color(red, green, blue)
   }
-
 
   def colorForM(m: Double): Color = {
     val mMin = 0.0
     val mMax = mInitInput.text.value.toDoubleOption.getOrElse(2.8)
     val seuilBrule = 0.02
-
     val clamped = math.max(mMin, math.min(m, mMax))
     val ratio = (clamped - mMin) / (mMax - mMin)
-    // vert -> noir selon la masse restante
     if (m <= seuilBrule) {
       Color.Black
     } else {
-      // Vert pur (0, 1, 0) → Noir (0, 0, 0)
       Color.color(0, ratio, 0)
     }
   }
-
 
   def colorForState(state: CellStateType): Color = state match {
     case Unburned => Color.DarkGreen
@@ -152,10 +139,6 @@ object FireSimApp extends JFXApp3 {
                  | Température : ${cell.T}%.2f K
                  | Masse       : ${cell.m}%.3f kg/m² (init: ${cell.mInit}%.2f)
                  | Humidité (en kg_eau / kg) : ${cell.mW}%.2f en pourcentage
-                 | Intensité   : ${cell.I}%.2f kW/m
-                 | Brandons    : ${cell.fb}
-                 | Hauteur canopée: ${cell.z} m
-                 | Gap sous canopée: ${cell.h_gap} m
       """.stripMargin
     Platform.runLater { selectedCellLabel.text = txt }
   }
@@ -231,7 +214,7 @@ object FireSimApp extends JFXApp3 {
     val h_gap = 4.0
     val cells = (0 until gridSizeX).toList.map { i =>
       (0 until gridSizeY).toList.map { j =>
-        FireCell.default(i, j).copy(m = mInit, mInit = mInit, mW = mW, z = z, h_gap = h_gap)
+        FireCell.default(i, j).copy(m = mInit, mInit = mInit, mW = mW)
       }
     }
     currentGrid = Grid(gridSizeX, gridSizeY, cells)
@@ -276,10 +259,6 @@ object FireSimApp extends JFXApp3 {
     windDirChoice = new ComboBox[String](Seq(
       "aucun", "nord (↑)", "sud (↓)", "est (→)", "ouest (←)"
     )) { value = "aucun" }
-    withSpotfireBox = new CheckBox("Activer spot fire") { selected = false }
-    withTorchingBox = new CheckBox("Van Wagner (embrasement canopée)") { selected = false }
-    withSardoyBox = new CheckBox("Sardoy (flammes/gap canopée)") { selected = false }
-    withBrandonsBox = new CheckBox("Activer brandons") { selected = false }
     stateLabel = new Label("Clique sur une cellule pour démarrer le feu…") { font = Font(15) }
     selectedCellLabel = new Label("Sélectionne une cellule pour voir ses infos.") { font = Font(13); wrapText = true }
 
@@ -335,12 +314,7 @@ object FireSimApp extends JFXApp3 {
 
         new Thread(() => {
           writeCSVHeader("export_simulation.csv")
-          val gridIter = simulation.allSteps(
-            withTorching = withTorchingBox.selected.value,
-            withBrandons = withBrandonsBox.selected.value,
-            withSpotFire = withSpotfireBox.selected.value,
-            withSardoy = withSardoyBox.selected.value
-          ).iterator
+          val gridIter = simulation.allSteps().iterator
 
           var step = 0
           while (simulationRunning && step < 10000 && gridIter.hasNext) {
@@ -377,14 +351,10 @@ object FireSimApp extends JFXApp3 {
       add(new Label("Δt (s):"), 0, 5); add(dtInput, 1, 5)
       add(new Label("Vent (direction):"), 0, 6); add(windDirChoice, 1, 6)
       add(new Label("Vent (m/s):"), 0, 7); add(windSpeedInput, 1, 7)
-      add(withSpotfireBox, 0, 8, 2, 1)
-      add(withTorchingBox, 0, 9, 2, 1)
-      add(withSardoyBox, 0, 10, 2, 1)
-      add(withBrandonsBox, 0, 11, 2, 1)
-      add(startBtn, 0, 12, 2, 1)
-      add(resetBtn, 0, 13, 2, 1)
-      add(stopBtn, 0, 14, 2, 1)
-      add(finishBtn, 0, 15, 2, 1)
+      add(startBtn, 0, 8, 2, 1)
+      add(resetBtn, 0, 9, 2, 1)
+      add(stopBtn, 0, 10, 2, 1)
+      add(finishBtn, 0, 11, 2, 1)
     }
 
     val legendTemp = colorLegend("Temp. (K)", 250, 2000, colorForTemperature, fmt = v => f"$v%.0f")
