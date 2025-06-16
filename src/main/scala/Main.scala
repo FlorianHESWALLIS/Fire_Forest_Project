@@ -7,15 +7,12 @@ import scala.annotation.tailrec
 object Main extends App {
 
   // 1. Créer une grille 1×5
-  val grid0 = Grid.initializeGrid(1, 9)
+  val grid0 = Grid.initializeGrid(1, 1)
 
   // 2. Modifier la hauteur de canopée (z) selon position
   val updatedCells = grid0.cells.zipWithIndex.map { case (row, i) =>
     row.zipWithIndex.map { case (cell, j) =>
-      val z =
-        if (j == 2) 10.0      // colonne centrale = grande canopée
-        else if (j == 0 || j == 2) 10.0 // bords = taillis haut
-        else 10.0              // forêt moyenne
+      val z =  10 // forêt moyenne
       cell.copy(z = z)
     }
   }
@@ -39,7 +36,7 @@ object Main extends App {
   printGrid(grid2, showZ = false)
 
   // 6. Simuler la propagation du feu (exemple 10 pas)
-  val gridFinal = simulate_fire(grid2, 100)
+  val gridFinal = simulate_fire(grid2, 3000)
 
   // 7. Afficher grille après propagation
   println("\n🔥 APRÈS propagation")
@@ -81,8 +78,8 @@ object Main extends App {
                                   grid: Grid,
                                   meteo: Meteo,
                                   step: Int = 0,
-                                  withBrandons: Boolean = true,
-                                  withSpotFire: Boolean = true
+                                  withBrandons: Boolean = false,
+                                  withSpotFire: Boolean = false
                                 ): (Grid, Int) = {
     // Arrêt si toutes les cellules sont "Burned"
     if (grid.cells.flatten.forall(_.state == CellState.Burned)) (grid, step)

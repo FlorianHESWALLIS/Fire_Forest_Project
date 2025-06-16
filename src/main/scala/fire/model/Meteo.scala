@@ -9,4 +9,11 @@ case class Meteo(
     val (di, dj) = (toI - fromI, toJ - fromJ)
     (di, dj) == ventDirection
   }
+
+  def isDownwind(centerI: Int, centerJ: Int, neighborI: Int, neighborJ: Int): Boolean = {
+    val (di, dj) = (neighborI - centerI, neighborJ - centerJ)
+    (di, dj) == ventDirection
+  }
+
+
 }
