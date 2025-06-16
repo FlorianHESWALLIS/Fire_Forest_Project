@@ -25,13 +25,13 @@ case class Cell(
                  m: Double,
                  mInit: Double,
                  mW: Double,
-                 I: Double,
-                 fb: Int,
-                 z: Double,
-                 h_gap: Double,
-                 torchedSteps: Int,
-                 wasTorched: Boolean,
-                 isFront: Boolean
+                 //I: Double,
+                 //fb: Int,
+                 //z: Double,
+                 //h_gap: Double,
+                 //torchedSteps: Int,
+                 //wasTorched: Boolean,
+                 //isFront: Boolean
                )
 
 object Cell {
@@ -54,12 +54,12 @@ object Cell {
     m = 2.8, // kg/m² — combustible élevé (litière d’aiguilles + branchages)
     mInit = 2.8,
     mW = 0.06, // kg eau/kg sec — forêt de résineux sèche
-    I = 0.0,
-    fb = 0,
-    z = 18.0, // m — canopée de sapin adulte
-    h_gap = 4.0, // m — sous-bois dégagé
-    torchedSteps = 0,
-    wasTorched = false,
-    isFront = false
+    //I = 0.0,
+    //fb = 0,
+    //z = 18.0, // m — canopée de sapin adulte
+    //h_gap = 4.0, // m — sous-bois dégagé
+    //torchedSteps = 0,
+    //wasTorched = false,
+    //isFront = false
   )
 }
